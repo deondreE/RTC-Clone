@@ -13,6 +13,15 @@ extern int get_num_guests(void);
 extern void get_guest_position(int index, float* x, float* y);
 extern uint32_t get_guest_color(int index);
 
+// External ride functions
+extern int get_num_rides(void);
+extern void get_ride_info(int idx, int* x, int* y, int* width, int* height, int* status);
+
+// External staff functions
+extern int get_num_staff(void);
+extern void get_staff_position(int index, float* x, float* y);
+extern int get_staff_type(int index);
+
 // Forward declare UI framebuffer setter
 extern void set_ui_framebuffer(uint8_t* fb);
 
@@ -141,6 +150,25 @@ void render_frame(void) {
         }
     }
     
+    // Render rides
+    int num_rides = get_num_rides();
+    for (int i = 0; i < num_rides; i++) {
+        int rx, ry, rw, rh, rs;
+        get_ride_info(i, &rx, &ry, &rw, &rh, &rs);
+        
+        // Draw ride footprint
+        for (int dy = 0; dy < rh; dy++) {
+            for (int dx = 0; dx < rw; dx++) {
+                int screen_x, screen_y;
+                iso_to_screen(rx + dx, ry + dy, &screen_x, &screen_y);
+                
+                uint32_t ride_color = (rs == 3) ? 0x800000 : 0xFF6347; // Dark red if broken
+                draw_iso_tile_asm(g_renderer.framebuffer, screen_x, screen_y, 
+                                ride_color, g_renderer.screen_width);
+            }
+        }
+    }
+    
     // Render guests on top of tiles
     int num_guests = get_num_guests();
     for (int i = 0; i < num_guests; i++) {
@@ -165,6 +193,32 @@ void render_frame(void) {
                      6, 4, guest_color, g_renderer.screen_width); // Head
         fill_rect_asm(g_renderer.framebuffer, screen_x - 4, screen_y - 6, 
                      8, 6, guest_color, g_renderer.screen_width); // Body
+    }
+    
+    // Render staff
+    int num_staff = get_num_staff();
+    for (int i = 0; i < num_staff; i++) {
+        float staff_x, staff_y;
+        get_staff_position(i, &staff_x, &staff_y);
+        
+        int screen_x, screen_y;
+        iso_to_screen((int)staff_x, (int)staff_y, &screen_x, &screen_y);
+        
+        int tile_x = (int)staff_x;
+        int tile_y = (int)staff_y;
+        if (tile_x >= 0 && tile_x < MAP_SIZE && tile_y >= 0 && tile_y < MAP_SIZE) {
+            screen_y -= g_map[tile_y][tile_x].height * 8;
+        }
+        
+        // Staff color based on type (0=janitor, 1=mechanic)
+        int staff_type = get_staff_type(i);
+        uint32_t staff_color = (staff_type == 0) ? 0x00FF00 : 0x0000FF;
+        
+        // Draw staff with uniform
+        fill_rect_asm(g_renderer.framebuffer, screen_x - 3, screen_y - 10, 
+                     6, 4, 0xFFDDCC, g_renderer.screen_width); // Head
+        fill_rect_asm(g_renderer.framebuffer, screen_x - 4, screen_y - 6, 
+                     8, 6, staff_color, g_renderer.screen_width); // Uniform
     }
 }
 

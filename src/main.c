@@ -14,8 +14,8 @@ extern void render_ui(void);
 extern void handle_mouse_click(int x, int y, int button);
 extern void handle_key_press(int key);
 extern void move_camera(int dx, int dy);
-extern void init_font(const char *font_path);
-extern void cleanup_font(void);
+// extern void init_font(const char *font_path);
+// extern void cleanup_font(void);
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
@@ -136,7 +136,7 @@ void render(void) {
 }
 
 void cleanup(void) {
-    cleanup_font();
+    // cleanup_font();
     if (g_state.framebuffer) free(g_state.framebuffer);
     if (g_state.texture) SDL_DestroyTexture(g_state.texture);
     if (g_state.renderer) SDL_DestroyRenderer(g_state.renderer);
@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
     init_renderer(g_state.framebuffer, SCREEN_WIDTH, SCREEN_HEIGHT);
     init_simulation();
     init_ui();
-    init_font("/home/de/workspace/rtc-clone/assets/sprites/funny-fmt.png");  // Initialize font ONCE at startup
+    // init_font("/home/de/workspace/rtc-clone/assets/sprites/funny-fmt.png");  // Initialize font ONCE at startup
 
     g_state.running = true;
     uint64_t last_time = SDL_GetPerformanceCounter();

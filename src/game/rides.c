@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -17,7 +18,7 @@ typedef enum {
     RIDE_STATUS_CLOSED,
     RIDE_STATUS_OPEN,
     RIDE_STATUS_TESTING,
-    RIDE_STATUS_BROKEN,
+    RIDE_STATUS_BROKEN
 } RideStatus;
 
 typedef struct {
@@ -79,11 +80,11 @@ void init_rides(void) {
     g_num_rides = 2;
 }
 
-void update_rides (float dt) {
-    for (int i = 0; i < g_num_rides; ++i) {
-        if (!g_rides[i].active) continue; 
+void update_rides(float dt) {
+    for (int i = 0; i < g_num_rides; i++) {
+        if (!g_rides[i].active) continue;
 
-        // Random ride breakdowns
+        // Random breakdowns
         if (g_rides[i].status == RIDE_STATUS_OPEN) {
             g_rides[i].breakdown_progress += dt * 0.01f;
 
@@ -104,6 +105,7 @@ void update_rides (float dt) {
     }
 }
 
+// Check if a guest can ride
 bool can_guest_ride(int ride_idx, int guest_money) {
     if (ride_idx < 0 || ride_idx >= g_num_rides) return false;
     if (!g_rides[ride_idx].active) return false;
@@ -112,15 +114,16 @@ bool can_guest_ride(int ride_idx, int guest_money) {
     return true;
 }
 
-/// Adds a guest to the ride queue.
+// Add guest to queue
 void add_to_queue(int ride_idx) {
-    if (ride_idx >= 0 &&  ride_idx < g_num_rides) {
+    if (ride_idx >= 0 && ride_idx < g_num_rides) {
         g_rides[ride_idx].queue_length++;
     }
 }
 
+// Get ride at position
 int get_ride_at(int x, int y) {
-    for (int i = 0; i < g_num_rides; ++i) {
+    for (int i = 0; i < g_num_rides; i++) {
         if (!g_rides[i].active) continue;
 
         if (x >= g_rides[i].x && x < g_rides[i].x + g_rides[i].width &&
@@ -128,10 +131,10 @@ int get_ride_at(int x, int y) {
             return i;
         }
     }
-
     return -1;
 }
 
+// Getters
 int get_num_rides(void) {
     return g_num_rides;
 }
@@ -167,6 +170,7 @@ int get_ride_queue(int idx) {
     return 0;
 }
 
+// Repair ride
 void repair_ride(int idx) {
     if (idx >= 0 && idx < g_num_rides && g_rides[idx].active) {
         if (g_rides[idx].status == RIDE_STATUS_BROKEN) {
@@ -174,4 +178,15 @@ void repair_ride(int idx) {
             printf("Ride '%s' has been repaired!\n", g_rides[idx].name);
         }
     }
+}
+
+// Save/Load support
+void save_ride_data(FILE* f) {
+    fwrite(&g_num_rides, sizeof(int), 1, f);
+    fwrite(g_rides, sizeof(Ride), MAX_RIDES, f);
+}
+
+void load_ride_data(FILE* f) {
+    fread(&g_num_rides, sizeof(int), 1, f);
+    fread(g_rides, sizeof(Ride), MAX_RIDES, f);
 }

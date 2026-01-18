@@ -74,7 +74,7 @@ extern int get_total_litter_count(void);
 
 void init_simulation(void) {
     printf("Initializing simulation...\n");
-    
+
     g_park.num_guests = 5;
     g_park.park_rating = 800;
     g_park.total_money = 10000;
@@ -102,11 +102,11 @@ void init_simulation(void) {
         g_guests[i].target_shop = -1;
         g_guests[i].litter_timer = 0.0f;
         strcpy(g_guests[i].thought, "I love this park!");
-        
+
         uint32_t colors[] = {0xFF00FF, 0x00FFFF, 0xFFFF00, 0xFF8800, 0x00FF88};
         g_guests[i].color = colors[i % 5];
     }
-    
+
     // Initialize subsystems
     init_rides();
     init_staff();
@@ -121,12 +121,12 @@ void update_guest_ai(Guest* guest, float dt) {
     guest->thirst += dt * 0.5f;
     guest->bathroom += dt * 0.4f;
     guest->energy -= dt * 0.2f;
-    
+
     if (guest->hunger > 100) guest->hunger = 100;
     if (guest->thirst > 100) guest->thirst = 100;
     if (guest->bathroom > 100) guest->bathroom = 100;
     if (guest->energy < 0) guest->energy = 0;
-    
+
     // Litter generation
     guest->litter_timer += dt;
     if (guest->litter_timer > 30.0f && (rand() % 100) < 10) {
@@ -137,7 +137,7 @@ void update_guest_ai(Guest* guest, float dt) {
         }
         guest->litter_timer = 0.0f;
     }
-    
+
     // Update happiness based on needs
     if (guest->hunger > 80) {
         guest->happiness -= dt * 3;
@@ -154,10 +154,10 @@ void update_guest_ai(Guest* guest, float dt) {
     } else {
         guest->happiness += dt * 0.5f;
     }
-    
+
     if (guest->happiness > 100) guest->happiness = 100;
     if (guest->happiness < 0) guest->happiness = 0;
-    
+
     // Priority AI - handle urgent needs first
     if (guest->bathroom > 90 && guest->state != GUEST_STATE_HEADING_TO_SHOP) {
         int shop_idx = find_nearest_shop(2, (int)guest->x, (int)guest->y);  // 2 = bathroom
@@ -182,7 +182,7 @@ void update_guest_ai(Guest* guest, float dt) {
             guest->has_target = false;
         }
     }
-    
+
     // State machine
     switch (guest->state) {
         case GUEST_STATE_WANDERING:
@@ -202,7 +202,7 @@ void update_guest_ai(Guest* guest, float dt) {
                 }
             }
             break;
-            
+
         case GUEST_STATE_HEADING_TO_RIDE:
             if (!guest->has_target && guest->target_ride >= 0) {
                 int rx, ry, rw, rh, rs;
@@ -213,7 +213,7 @@ void update_guest_ai(Guest* guest, float dt) {
                 guest->has_target = true;
             }
             break;
-            
+
         case GUEST_STATE_HEADING_TO_SHOP:
             if (!guest->has_target && guest->target_shop >= 0) {
                 int sx, sy, st;
@@ -223,7 +223,7 @@ void update_guest_ai(Guest* guest, float dt) {
                 guest->has_target = true;
             }
             break;
-            
+
         default:
             guest->state = GUEST_STATE_WANDERING;
             break;
@@ -232,7 +232,7 @@ void update_guest_ai(Guest* guest, float dt) {
 
 void update_guest(Guest* guest, float dt) {
     update_guest_ai(guest, dt);
-    
+
     // Move towards target
     if (guest->has_target) {
         float dx = guest->target_x - guest->x;
@@ -241,7 +241,7 @@ void update_guest(Guest* guest, float dt) {
 
         if (dist < 0.5f) {
             guest->has_target = false;
-            
+
             // Reached ride
             if (guest->state == GUEST_STATE_HEADING_TO_RIDE) {
                 add_to_queue(guest->target_ride);
@@ -252,16 +252,16 @@ void update_guest(Guest* guest, float dt) {
                 guest->target_ride = -1;
                 strcpy(guest->thought, "That was amazing!");
             }
-            
+
             // Reached shop
             if (guest->state == GUEST_STATE_HEADING_TO_SHOP && guest->target_shop >= 0) {
                 int cost;
                 make_purchase(guest->target_shop, &cost);
                 guest->money -= cost;
-                
+
                 int sx, sy, st;
                 get_shop_info(guest->target_shop, &sx, &sy, &st);
-                
+
                 if (st == 0) {  // Food
                     guest->hunger = 0;
                     strcpy(guest->thought, "Mmm, delicious!");
@@ -272,7 +272,7 @@ void update_guest(Guest* guest, float dt) {
                     guest->bathroom = 0;
                     strcpy(guest->thought, "Much better!");
                 }
-                
+
                 guest->happiness += 15;
                 guest->state = GUEST_STATE_WANDERING;
                 guest->target_shop = -1;
@@ -299,7 +299,7 @@ void update_simulation(float dt) {
     for (int i = 0; i < g_park.num_guests; i++) {
         update_guest(&g_guests[i], dt);
     }
-    
+
     // Update subsystems
     update_rides(dt);
     update_staff(dt);
@@ -310,9 +310,9 @@ void update_simulation(float dt) {
     for (int i = 0; i < g_park.num_guests; i++) {
         total_happiness += g_guests[i].happiness;
     }
-    
+
     int litter_penalty = get_total_litter_count() * 5;
-    
+
     if (g_park.num_guests > 0) {
         g_park.park_rating = (total_happiness * 10) / g_park.num_guests - litter_penalty;
         if (g_park.park_rating < 0) g_park.park_rating = 0;
@@ -347,7 +347,7 @@ void update_simulation(float dt) {
             last_spawn = (int)g_park.time;
         }
     }
-    
+
     // Monthly expenses
     static float wage_timer = 0.0f;
     wage_timer += dt;
@@ -399,4 +399,37 @@ int get_total_guests_entered(void) {
 
 float get_time_of_day(void) {
     return g_park.time_of_day;
+}
+
+// Save/Load support
+void get_park_state(int* rating, int* money, int* guests, float* time, float* tod, int* total_entered, int* entrance_fee) {
+    *rating = g_park.park_rating;
+    *money = g_park.total_money;
+    *guests = g_park.num_guests;
+    *time = g_park.time;
+    *tod = g_park.time_of_day;
+    *total_entered = g_park.total_guests_entered;
+    *entrance_fee = g_park.entrance_fee;
+}
+
+void set_park_state(int rating, int money, int guests, float time, float tod, int total_entered, int entrance_fee) {
+    g_park.park_rating = rating;
+    g_park.total_money = money;
+    g_park.num_guests = guests;
+    g_park.time = time;
+    g_park.time_of_day = tod;
+    g_park.total_guests_entered = total_entered;
+    g_park.entrance_fee = entrance_fee;
+}
+
+void save_guest_data(FILE* f) {
+    for (int i = 0; i < g_park.num_guests; i++) {
+        fwrite(&g_guests[i], sizeof(Guest), 1, f);
+    }
+}
+
+void load_guest_data(FILE* f) {
+    for (int i = 0; i < g_park.num_guests; i++) {
+        fread(&g_guests[i], sizeof(Guest), 1, f);
+    }
 }

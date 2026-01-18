@@ -35,7 +35,7 @@ extern void remove_litter_at(float x, float y, float radius);
 
 void init_staff(void) {
     printf("Initializing staff system...\n");
-    
+
     // Hire a janitor
     g_staff[0].active = true;
     g_staff[0].type = STAFF_JANITOR;
@@ -48,7 +48,7 @@ void init_staff(void) {
     g_staff[0].wage = 50;
     g_staff[0].has_target = false;
     g_staff[0].is_working = false;
-    
+
     // Hire a second janitor
     g_staff[1].active = true;
     g_staff[1].type = STAFF_JANITOR;
@@ -61,7 +61,7 @@ void init_staff(void) {
     g_staff[1].wage = 50;
     g_staff[1].has_target = false;
     g_staff[1].is_working = false;
-    
+
     // Hire a mechanic
     g_staff[2].active = true;
     g_staff[2].type = STAFF_MECHANIC;
@@ -74,7 +74,7 @@ void init_staff(void) {
     g_staff[2].wage = 80;
     g_staff[2].has_target = false;
     g_staff[2].is_working = false;
-    
+
     g_num_staff = 3;
 }
 
@@ -82,7 +82,7 @@ void update_staff_member(Staff* staff, float dt) {
     // Decrease energy
     staff->energy -= dt * 0.5f;
     if (staff->energy < 0) staff->energy = 0;
-    
+
     // Janitor AI - look for litter
     if (staff->type == STAFF_JANITOR) {
         if (!staff->has_target || staff->energy < 30) {
@@ -100,18 +100,18 @@ void update_staff_member(Staff* staff, float dt) {
                 staff->has_target = true;
                 staff->is_working = false;
             }
-            
+
             // Restore energy when needed
             if (staff->energy < 30) {
                 staff->energy = 100.0f;
             }
         }
-        
+
         // Check if we reached litter
         float dx = staff->target_x - staff->x;
         float dy = staff->target_y - staff->y;
         float dist = sqrtf(dx*dx + dy*dy);
-        
+
         if (dist < 0.5f && staff->is_working) {
             // Clean the litter
             remove_litter_at(staff->x, staff->y, 0.5f);
@@ -124,19 +124,19 @@ void update_staff_member(Staff* staff, float dt) {
             staff->target_x = staff->patrol_area_x + (rand() % (staff->patrol_radius * 2)) - staff->patrol_radius;
             staff->target_y = staff->patrol_area_y + (rand() % (staff->patrol_radius * 2)) - staff->patrol_radius;
             staff->has_target = true;
-            
+
             if (staff->energy < 30) {
                 staff->energy = 100.0f;
             }
         }
     }
-    
+
     // Move towards target
     if (staff->has_target) {
         float dx = staff->target_x - staff->x;
         float dy = staff->target_y - staff->y;
         float dist = sqrtf(dx * dx + dy * dy);
-        
+
         if (dist < 0.5f) {
             staff->has_target = false;
         } else {
@@ -145,7 +145,7 @@ void update_staff_member(Staff* staff, float dt) {
             staff->y += (dy / dist) * speed * dt;
         }
     }
-    
+
     // Keep in bounds
     if (staff->x < 0) staff->x = 0;
     if (staff->y < 0) staff->y = 0;
@@ -184,7 +184,7 @@ void dispatch_mechanic(int ride_x, int ride_y) {
     for (int i = 0; i < g_num_staff; i++) {
         if (!g_staff[i].active) continue;
         if (g_staff[i].type != STAFF_MECHANIC) continue;
-        
+
         g_staff[i].target_x = ride_x;
         g_staff[i].target_y = ride_y;
         g_staff[i].has_target = true;
@@ -201,4 +201,15 @@ int get_total_wages(void) {
         }
     }
     return total;
+}
+
+// Save/Load support
+void save_staff_data(FILE* f) {
+    fwrite(&g_num_staff, sizeof(int), 1, f);
+    fwrite(g_staff, sizeof(Staff), MAX_STAFF, f);
+}
+
+void load_staff_data(FILE* f) {
+    fread(&g_num_staff, sizeof(int), 1, f);
+    fread(g_staff, sizeof(Staff), MAX_STAFF, f);
 }

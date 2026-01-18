@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 // Forward declarations
 extern void init_renderer(uint8_t* framebuffer, int width, int height);
@@ -14,8 +15,11 @@ extern void render_ui(void);
 extern void handle_mouse_click(int x, int y, int button);
 extern void handle_key_press(int key);
 extern void move_camera(int dx, int dy);
-// extern void init_font(const char *font_path);
-// extern void cleanup_font(void);
+
+// Save/Load functions
+extern bool save_game(int slot);
+extern bool load_game(int slot);
+extern bool auto_save(void);
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
@@ -50,9 +54,7 @@ bool init_sdl(void) {
         return false;
     }
 
-    g_state.renderer = SDL_CreateRenderer(
-        g_state.window, -1, SDL_RENDERER_ACCELERATED
-    );
+    g_state.renderer = SDL_CreateRenderer(g_state.window, -1, SDL_RENDERER_ACCELERATED);
     if (!g_state.renderer) {
         printf("Renderer creation failed: %s\n", SDL_GetError());
         return false;
@@ -89,9 +91,7 @@ void handle_events(void) {
                 g_state.running = false;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                handle_mouse_click(
-                    event.button.x, event.button.y, event.button.button
-                );
+                handle_mouse_click(event.button.x, event.button.y, event.button.button);
                 break;
             case SDL_KEYDOWN:
                 if (event.key.keysym.sym == SDLK_ESCAPE) {
@@ -104,6 +104,26 @@ void handle_events(void) {
                     move_camera(-10, 0);
                 } else if (event.key.keysym.sym == SDLK_RIGHT) {
                     move_camera(10, 0);
+                } else if (event.key.keysym.sym == SDLK_F5) {
+                    // Quick save
+                    if (save_game(1)) {
+                        printf("Quick saved to slot 1!\n");
+                    }
+                } else if (event.key.keysym.sym == SDLK_F9) {
+                    // Quick load
+                    if (load_game(1)) {
+                        printf("Quick loaded from slot 1!\n");
+                    }
+                } else if (event.key.keysym.sym == SDLK_s && (SDL_GetModState() & KMOD_CTRL)) {
+                    // Ctrl+S: Save to slot 2
+                    if (save_game(2)) {
+                        printf("Saved to slot 2!\n");
+                    }
+                } else if (event.key.keysym.sym == SDLK_l && (SDL_GetModState() & KMOD_CTRL)) {
+                    // Ctrl+L: Load from slot 2
+                    if (load_game(2)) {
+                        printf("Loaded from slot 2!\n");
+                    }
                 } else {
                     handle_key_press(event.key.keysym.sym);
                 }
@@ -113,30 +133,19 @@ void handle_events(void) {
 }
 
 void render(void) {
-    // Clear framebuffer to sky blue
-    uint32_t* pixels = (uint32_t*)g_state.framebuffer;
-    uint32_t clear_color = 0xFF87D7FF;  // ARGB8888 format
-
-    for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) {
-        pixels[i] = clear_color;
-    }
-
-    // Render game world
+    // Render game world (sky is now drawn in render_frame)
     render_frame();
 
     // Render UI on top
     render_ui();
 
     // Update texture and present
-    SDL_UpdateTexture(
-        g_state.texture, NULL, g_state.framebuffer, SCREEN_WIDTH * 4
-    );
+    SDL_UpdateTexture(g_state.texture, NULL, g_state.framebuffer, SCREEN_WIDTH * 4);
     SDL_RenderCopy(g_state.renderer, g_state.texture, NULL, NULL);
     SDL_RenderPresent(g_state.renderer);
 }
 
 void cleanup(void) {
-    // cleanup_font();
     if (g_state.framebuffer) free(g_state.framebuffer);
     if (g_state.texture) SDL_DestroyTexture(g_state.texture);
     if (g_state.renderer) SDL_DestroyRenderer(g_state.renderer);
@@ -159,7 +168,6 @@ int main(int argc, char* argv[]) {
     init_renderer(g_state.framebuffer, SCREEN_WIDTH, SCREEN_HEIGHT);
     init_simulation();
     init_ui();
-    // init_font("/home/de/workspace/rtc-clone/assets/sprites/funny-fmt.png");  // Initialize font ONCE at startup
 
     g_state.running = true;
     uint64_t last_time = SDL_GetPerformanceCounter();
@@ -167,21 +175,28 @@ int main(int argc, char* argv[]) {
 
     printf("Game loop starting...\n");
 
+    // Auto-save timer
+    float autosave_timer = 0.0f;
+    const float AUTOSAVE_INTERVAL = 300.0f;  // Auto-save every 5 minutes
+
     while (g_state.running) {
         uint64_t current_time = SDL_GetPerformanceCounter();
         float dt = (float)((current_time - last_time) / frequency);
-
-        // Clamp delta time
-        if (dt > 0.1f) dt = 0.1f;
-        if (dt < 0.0001f) dt = 0.016f;
-
         last_time = current_time;
 
         handle_events();
         update_simulation(dt);
         render();
 
-        // Target 60 FPS
+        // Auto-save periodically
+        autosave_timer += dt;
+        if (autosave_timer >= AUTOSAVE_INTERVAL) {
+            printf("Auto-saving...\n");
+            auto_save();
+            autosave_timer = 0.0f;
+        }
+
+        // Cap at ~60 FPS
         SDL_Delay(1);
     }
 

@@ -28,7 +28,7 @@ static int g_num_shops = 0;
 
 void init_shops(void) {
     printf("Initializing shops system...\n");
-    
+
     // Add a hot dog stand
     g_shops[0].active = true;
     g_shops[0].type = SHOP_TYPE_FOOD;
@@ -38,7 +38,7 @@ void init_shops(void) {
     g_shops[0].price = 4;
     g_shops[0].total_sales = 0;
     g_shops[0].total_revenue = 0;
-    
+
     // Add a drink stand
     g_shops[1].active = true;
     g_shops[1].type = SHOP_TYPE_DRINK;
@@ -48,7 +48,7 @@ void init_shops(void) {
     g_shops[1].price = 3;
     g_shops[1].total_sales = 0;
     g_shops[1].total_revenue = 0;
-    
+
     // Add a bathroom
     g_shops[2].active = true;
     g_shops[2].type = SHOP_TYPE_BATHROOM;
@@ -58,20 +58,20 @@ void init_shops(void) {
     g_shops[2].price = 1;
     g_shops[2].total_sales = 0;
     g_shops[2].total_revenue = 0;
-    
+
     g_num_shops = 3;
 }
 
 bool add_shop(ShopType type, int x, int y) {
     if (g_num_shops >= MAX_SHOPS) return false;
-    
+
     g_shops[g_num_shops].active = true;
     g_shops[g_num_shops].type = type;
     g_shops[g_num_shops].x = x;
     g_shops[g_num_shops].y = y;
     g_shops[g_num_shops].total_sales = 0;
     g_shops[g_num_shops].total_revenue = 0;
-    
+
     switch (type) {
         case SHOP_TYPE_FOOD:
             strcpy(g_shops[g_num_shops].name, "Food Stall");
@@ -90,7 +90,7 @@ bool add_shop(ShopType type, int x, int y) {
             g_shops[g_num_shops].price = 10;
             break;
     }
-    
+
     g_num_shops++;
     return true;
 }
@@ -108,21 +108,21 @@ void make_purchase(int shop_idx, int* cost) {
 int find_nearest_shop(ShopType type, int from_x, int from_y) {
     int nearest_idx = -1;
     int nearest_dist = 999999;
-    
+
     for (int i = 0; i < g_num_shops; i++) {
         if (!g_shops[i].active) continue;
         if (g_shops[i].type != type) continue;
-        
+
         int dx = g_shops[i].x - from_x;
         int dy = g_shops[i].y - from_y;
         int dist = dx*dx + dy*dy;
-        
+
         if (dist < nearest_dist) {
             nearest_dist = dist;
             nearest_idx = i;
         }
     }
-    
+
     return nearest_idx;
 }
 
@@ -163,4 +163,15 @@ int get_total_shop_revenue(void) {
         }
     }
     return total;
+}
+
+// Save/Load support
+void save_shop_data(FILE* f) {
+    fwrite(&g_num_shops, sizeof(int), 1, f);
+    fwrite(g_shops, sizeof(Shop), MAX_SHOPS, f);
+}
+
+void load_shop_data(FILE* f) {
+    fread(&g_num_shops, sizeof(int), 1, f);
+    fread(g_shops, sizeof(Shop), MAX_SHOPS, f);
 }

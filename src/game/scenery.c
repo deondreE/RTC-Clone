@@ -29,7 +29,7 @@ static int g_num_scenery = 0;
 
 void init_scenery(void) {
     printf("Initializing scenery system...\n");
-    
+
     // Place some initial trees
     for (int i = 0; i < 15; i++) {
         g_scenery[i].active = true;
@@ -39,7 +39,7 @@ void init_scenery(void) {
         g_scenery[i].color = (g_scenery[i].type == SCENERY_TREE_OAK) ? 0x228B22 : 0x0F4D0F;
         g_scenery[i].cost = 50;
     }
-    
+
     // Place some benches along paths
     for (int i = 15; i < 20; i++) {
         g_scenery[i].active = true;
@@ -49,7 +49,7 @@ void init_scenery(void) {
         g_scenery[i].color = 0x8B4513;
         g_scenery[i].cost = 30;
     }
-    
+
     // Place some lamps
     for (int i = 20; i < 25; i++) {
         g_scenery[i].active = true;
@@ -59,7 +59,7 @@ void init_scenery(void) {
         g_scenery[i].color = 0xFFFF00;
         g_scenery[i].cost = 75;
     }
-    
+
     // Place trash cans
     for (int i = 25; i < 30; i++) {
         g_scenery[i].active = true;
@@ -69,18 +69,18 @@ void init_scenery(void) {
         g_scenery[i].color = 0x404040;
         g_scenery[i].cost = 25;
     }
-    
+
     g_num_scenery = 30;
 }
 
 bool add_scenery(SceneryType type, int x, int y) {
     if (g_num_scenery >= MAX_SCENERY) return false;
-    
+
     g_scenery[g_num_scenery].active = true;
     g_scenery[g_num_scenery].type = type;
     g_scenery[g_num_scenery].x = x;
     g_scenery[g_num_scenery].y = y;
-    
+
     switch (type) {
         case SCENERY_TREE_OAK:
             g_scenery[g_num_scenery].color = 0x228B22;
@@ -115,7 +115,7 @@ bool add_scenery(SceneryType type, int x, int y) {
             g_scenery[g_num_scenery].cost = 25;
             break;
     }
-    
+
     g_num_scenery++;
     return true;
 }
@@ -129,6 +129,8 @@ void remove_scenery_at(int x, int y) {
         }
     }
 }
+
+// Getters for rendering
 int get_num_scenery(void) {
     int count = 0;
     for (int i = 0; i < g_num_scenery; i++) {
@@ -160,7 +162,7 @@ bool is_trash_can_nearby(int x, int y, int radius) {
     for (int i = 0; i < g_num_scenery; i++) {
         if (!g_scenery[i].active) continue;
         if (g_scenery[i].type != SCENERY_TRASH_CAN) continue;
-        
+
         int dx = g_scenery[i].x - x;
         int dy = g_scenery[i].y - y;
         if (dx*dx + dy*dy <= radius*radius) {
@@ -168,4 +170,15 @@ bool is_trash_can_nearby(int x, int y, int radius) {
         }
     }
     return false;
+}
+
+// Save/Load support
+void save_scenery_data(FILE* f) {
+    fwrite(&g_num_scenery, sizeof(int), 1, f);
+    fwrite(g_scenery, sizeof(Scenery), MAX_SCENERY, f);
+}
+
+void load_scenery_data(FILE* f) {
+    fread(&g_num_scenery, sizeof(int), 1, f);
+    fread(g_scenery, sizeof(Scenery), MAX_SCENERY, f);
 }

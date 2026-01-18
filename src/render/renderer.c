@@ -22,6 +22,18 @@ extern int get_num_staff(void);
 extern void get_staff_position(int index, float* x, float* y);
 extern int get_staff_type(int index);
 
+// External scenery functions
+extern int get_num_scenery(void);
+extern void get_scenery_info(int idx, int* x, int* y, int* type, uint32_t* color);
+
+// External shop functions
+extern int get_num_shops(void);
+extern void get_shop_info(int idx, int* x, int* y, int* type);
+
+// External litter functions
+extern int get_num_litter(void);
+extern void get_litter_position(int idx, float* x, float* y);
+
 // Forward declare UI framebuffer setter
 extern void set_ui_framebuffer(uint8_t* fb);
 
@@ -162,11 +174,80 @@ void render_frame(void) {
                 int screen_x, screen_y;
                 iso_to_screen(rx + dx, ry + dy, &screen_x, &screen_y);
                 
-                uint32_t ride_color = (rs == 3) ? 0x800000 : 0xFF6347; // Dark red if broken
+                uint32_t ride_color = (rs == 3) ? 0x800000 : 0xFF6347;
                 draw_iso_tile_asm(g_renderer.framebuffer, screen_x, screen_y, 
                                 ride_color, g_renderer.screen_width);
             }
         }
+    }
+    
+    // Render shops
+    int num_shops = get_num_shops();
+    for (int i = 0; i < num_shops; i++) {
+        int sx, sy, st;
+        get_shop_info(i, &sx, &sy, &st);
+        
+        int screen_x, screen_y;
+        iso_to_screen(sx, sy, &screen_x, &screen_y);
+        
+        // Color based on shop type
+        uint32_t shop_color;
+        switch (st) {
+            case 0: shop_color = 0xFF8C00; break;  // Food - orange
+            case 1: shop_color = 0x1E90FF; break;  // Drink - blue
+            case 2: shop_color = 0xFFFFFF; break;  // Bathroom - white
+            case 3: shop_color = 0xFF1493; break;  // Gift - pink
+            default: shop_color = 0xFFFFFF; break;
+        }
+        
+        draw_iso_tile_asm(g_renderer.framebuffer, screen_x, screen_y, 
+                        shop_color, g_renderer.screen_width);
+    }
+    
+    // Render scenery
+    int num_scenery = get_num_scenery();
+    for (int i = 0; i < num_scenery; i++) {
+        int scx, scy, sct;
+        uint32_t sc_color;
+        get_scenery_info(i, &scx, &scy, &sct, &sc_color);
+        
+        int screen_x, screen_y;
+        iso_to_screen(scx, scy, &screen_x, &screen_y);
+        
+        // Draw scenery based on type
+        if (sct == 0 || sct == 1) {  // Trees
+            // Draw tree trunk
+            fill_rect_asm(g_renderer.framebuffer, screen_x - 2, screen_y - 6, 
+                         4, 10, 0x8B4513, g_renderer.screen_width);
+            // Draw tree canopy
+            fill_rect_asm(g_renderer.framebuffer, screen_x - 6, screen_y - 16, 
+                         12, 12, sc_color, g_renderer.screen_width);
+        } else if (sct == 2) {  // Bench
+            fill_rect_asm(g_renderer.framebuffer, screen_x - 4, screen_y - 4, 
+                         8, 4, sc_color, g_renderer.screen_width);
+        } else if (sct == 3) {  // Lamp
+            fill_rect_asm(g_renderer.framebuffer, screen_x - 1, screen_y - 12, 
+                         2, 12, 0x808080, g_renderer.screen_width);
+            fill_rect_asm(g_renderer.framebuffer, screen_x - 3, screen_y - 14, 
+                         6, 4, sc_color, g_renderer.screen_width);
+        } else {  // Other scenery
+            fill_rect_asm(g_renderer.framebuffer, screen_x - 3, screen_y - 6, 
+                         6, 6, sc_color, g_renderer.screen_width);
+        }
+    }
+    
+    // Render litter
+    int num_litter = get_num_litter();
+    for (int i = 0; i < num_litter; i++) {
+        float litter_x, litter_y;
+        get_litter_position(i, &litter_x, &litter_y);
+        
+        int screen_x, screen_y;
+        iso_to_screen((int)litter_x, (int)litter_y, &screen_x, &screen_y);
+        
+        // Draw small red square for litter
+        fill_rect_asm(g_renderer.framebuffer, screen_x - 2, screen_y - 2, 
+                     4, 4, 0xFF0000, g_renderer.screen_width);
     }
     
     // Render guests on top of tiles

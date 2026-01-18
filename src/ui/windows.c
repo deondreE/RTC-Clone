@@ -5,6 +5,12 @@
 #include <string.h>
 #include <SDL2/SDL.h>
 
+// External bitmap font functions
+extern void draw_char_bitmap(uint8_t* framebuffer, int x, int y, char c, 
+                             uint32_t color, int screen_width);
+extern void draw_text_bitmap(uint8_t* framebuffer, int x, int y, const char* text, 
+                             uint32_t color, int screen_width);
+
 // External assembly drawing functions
 extern void fill_rect_asm(uint8_t* dest, int x, int y, int width, int height, uint32_t color, int screen_width);
 extern void draw_hline_asm(uint8_t* dest, int x, int y, int width, uint32_t color, int screen_width);
@@ -59,36 +65,6 @@ static Window g_windows[MAX_WINDOWS] = {0};
 static uint8_t* g_framebuffer = NULL;
 static ToolType g_current_tool = TOOL_NONE;
 
-// Simple font drawing (8x8 characters)
-static void draw_char(int x, int y, char c, uint32_t color) {
-    // Very simple ASCII rendering - just boxes for now
-    // In a real implementation, you'd have a bitmap font
-    for (int dy = 0; dy < 8; dy++) {
-        for (int dx = 0; dx < 6; dx++) {
-            if ((dx + dy) % 2 == 0) {
-                int px = x + dx;
-                int py = y + dy;
-                if (px >= 0 && px < SCREEN_WIDTH && py >= 0 && py < SCREEN_HEIGHT) {
-                    int idx = (py * SCREEN_WIDTH + px) * 4;
-                    g_framebuffer[idx + 0] = (color >> 0) & 0xFF;
-                    g_framebuffer[idx + 1] = (color >> 8) & 0xFF;
-                    g_framebuffer[idx + 2] = (color >> 16) & 0xFF;
-                    g_framebuffer[idx + 3] = 0xFF;
-                }
-            }
-        }
-    }
-}
-
-static void draw_text(int x, int y, const char* text, uint32_t color) {
-    int offset = 0;
-    while (*text) {
-        draw_char(x + offset, y, *text, color);
-        offset += 7;
-        text++;
-    }
-}
-
 static void draw_window_frame(Window* win) {
     // Window background
     fill_rect_asm(g_framebuffer, win->x, win->y, win->width, win->height, 
@@ -108,8 +84,8 @@ static void draw_window_frame(Window* win) {
     draw_vline_asm(g_framebuffer, win->x + win->width - 1, win->y, win->height,
                    0x000000, SCREEN_WIDTH);
     
-    // Title text
-    draw_text(win->x + 5, win->y + 6, win->title, 0xFFFFFF);
+    // Title text using bitmap font
+    draw_text_bitmap(g_framebuffer, win->x + 5, win->y + 6, win->title, 0xFFFFFF, SCREEN_WIDTH);
 }
 
 static void draw_stats_window(Window* win) {
@@ -118,27 +94,27 @@ static void draw_stats_window(Window* win) {
     int y = win->y + 30;
     
     snprintf(buffer, sizeof(buffer), "Guests: %d", get_num_guests());
-    draw_text(win->x + 10, y, buffer, 0x000000);
+    draw_text_bitmap(g_framebuffer, win->x + 10, y, buffer, 0x000000, SCREEN_WIDTH);
     y += 12;
     
-    snprintf(buffer, sizeof(buffer), "Total Entered: %d", get_total_guests_entered());
-    draw_text(win->x + 10, y, buffer, 0x000000);
+    snprintf(buffer, sizeof(buffer), "Total: %d", get_total_guests_entered());
+    draw_text_bitmap(g_framebuffer, win->x + 10, y, buffer, 0x000000, SCREEN_WIDTH);
     y += 12;
     
     snprintf(buffer, sizeof(buffer), "Rating: %d", get_park_rating());
-    draw_text(win->x + 10, y, buffer, 0x000000);
+    draw_text_bitmap(g_framebuffer, win->x + 10, y, buffer, 0x000000, SCREEN_WIDTH);
     y += 12;
     
     snprintf(buffer, sizeof(buffer), "Money: $%d", get_park_money());
-    draw_text(win->x + 10, y, buffer, 0x000000);
+    draw_text_bitmap(g_framebuffer, win->x + 10, y, buffer, 0x000000, SCREEN_WIDTH);
     y += 12;
     
     snprintf(buffer, sizeof(buffer), "Staff: %d", get_num_staff());
-    draw_text(win->x + 10, y, buffer, 0x000000);
+    draw_text_bitmap(g_framebuffer, win->x + 10, y, buffer, 0x000000, SCREEN_WIDTH);
     y += 12;
     
     snprintf(buffer, sizeof(buffer), "Rides: %d", get_num_rides());
-    draw_text(win->x + 10, y, buffer, 0x000000);
+    draw_text_bitmap(g_framebuffer, win->x + 10, y, buffer, 0x000000, SCREEN_WIDTH);
 }
 
 static void draw_build_window(Window* win) {
@@ -149,28 +125,28 @@ static void draw_build_window(Window* win) {
         "[4] Demolish"
     };
     
-    draw_text(win->x + 10, win->y + 30, "Build Tools", 0x000000);
+    draw_text_bitmap(g_framebuffer, win->x + 10, win->y + 30, "Build Tools", 0x000000, SCREEN_WIDTH);
     
     for (int i = 0; i < 4; i++) {
         uint32_t color = (g_current_tool == i + 1) ? 0xFF0000 : 0x000000;
-        draw_text(win->x + 10, win->y + 50 + i * 15, tools[i], color);
+        draw_text_bitmap(g_framebuffer, win->x + 10, win->y + 50 + i * 15, tools[i], color, SCREEN_WIDTH);
     }
     
     // Show current tool
     const char* tool_names[] = {"None", "Raise", "Lower", "Path", "Demolish"};
     char buffer[64];
     snprintf(buffer, sizeof(buffer), "Active: %s", tool_names[g_current_tool]);
-    draw_text(win->x + 10, win->y + 120, buffer, 0x0000AA);
+    draw_text_bitmap(g_framebuffer, win->x + 10, win->y + 120, buffer, 0x0000AA, SCREEN_WIDTH);
 }
 
 static void draw_rides_window(Window* win) {
-    draw_text(win->x + 10, win->y + 30, "Rides", 0x000000);
+    draw_text_bitmap(g_framebuffer, win->x + 10, win->y + 30, "Rides", 0x000000, SCREEN_WIDTH);
     
     int num_rides = get_num_rides();
     for (int i = 0; i < num_rides && i < 5; i++) {
         char buffer[64];
         snprintf(buffer, sizeof(buffer), "%s: %d", get_ride_name(i), get_ride_queue(i));
-        draw_text(win->x + 10, win->y + 50 + i * 12, buffer, 0x000000);
+        draw_text_bitmap(g_framebuffer, win->x + 10, win->y + 50 + i * 12, buffer, 0x000000, SCREEN_WIDTH);
     }
 }
 

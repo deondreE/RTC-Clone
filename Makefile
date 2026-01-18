@@ -22,7 +22,7 @@ TARGET = rct-clone
 all: dirs $(TARGET)
 
 dirs:
-	@mkdir -p $(BUILD_DIR)/game $(BUILD_DIR)/render $(BUILD_DIR)/ui
+	@mkdir -p $(BUILD_DIR)/game $(BUILD_DIR)/render $(BUILD_DIR)/ui $(BUILD_DIR)/core
 	@mkdir -p $(ASSETS_DIR)/sprites
 
 $(TARGET): $(C_OBJECTS) $(ASM_OBJECTS)

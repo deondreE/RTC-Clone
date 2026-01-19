@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <string.h>
 #include <sys/types.h>
 
 #define SAVE_VERSION 1

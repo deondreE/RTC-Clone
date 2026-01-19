@@ -16,6 +16,9 @@ extern void fill_rect_asm(uint8_t* dest, int x, int y, int width, int height, ui
 extern void draw_hline_asm(uint8_t* dest, int x, int y, int width, uint32_t color, int screen_width);
 extern void draw_vline_asm(uint8_t* dest, int x, int y, int height, uint32_t color, int screen_width);
 
+extern void draw_sprite(uint8_t* framebuffer, int x, int y, int sprite_id, int screen_width);
+extern void load_sprite_sheet(const char* filename);
+
 // External getters from simulation
 extern int get_num_guests(void);
 extern int get_park_rating(void);
@@ -78,7 +81,8 @@ static void draw_window_frame(Window* win) {
     fill_rect_asm(g_framebuffer, win->x, win->y, win->width, 20,
                   0x0000AA, SCREEN_WIDTH);
     
-    // Border
+    draw_sprite(g_framebuffer, win->x + 2, win->y + 2, 0, SCREEN_WIDTH);
+                  // Border
     draw_hline_asm(g_framebuffer, win->x, win->y, win->width, 
                    0x000000, SCREEN_WIDTH);
     draw_hline_asm(g_framebuffer, win->x, win->y + win->height - 1, win->width,

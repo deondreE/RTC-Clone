@@ -14,7 +14,8 @@ extern void init_ui(void);
 extern void render_ui(void);
 extern void handle_mouse_click(int x, int y, int button);
 extern void handle_key_press(int key);
-extern void move_camera(int dx, int dy);
+extern void move_camera(int dx, int dy);\
+extern void load_sprite_sheet(const char* filename);
 
 // Save/Load functions
 extern bool save_game(int slot);
@@ -153,6 +154,9 @@ void cleanup(void) {
     SDL_Quit();
 }
 
+extern void init_sprite_system(void);
+
+
 int main(int argc, char* argv[]) {
     (void)argc;
     (void)argv;
@@ -166,6 +170,7 @@ int main(int argc, char* argv[]) {
 
     // Initialize game systems
     init_renderer(g_state.framebuffer, SCREEN_WIDTH, SCREEN_HEIGHT);
+    init_sprite_system();
     init_simulation();
     init_ui();
 

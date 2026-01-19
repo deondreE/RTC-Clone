@@ -54,6 +54,9 @@ extern int get_num_litter(void);
 extern void save_litter_data(FILE* f);
 extern void load_litter_data(FILE* f);
 
+extern void save_weather_data(FILE* f);
+extern void load_weather_data(FILE* f);
+
 static char g_park_name[64] = "My Amazing Park";
 
 // Ensure save directory exists
@@ -77,75 +80,78 @@ bool save_game(int slot) {
         printf("Invalid save slot: %d\n", slot);
         return false;
     }
-
+    
     ensure_save_dir();
-
+    
     char filepath[256];
     get_save_path(slot, filepath, sizeof(filepath));
-
+    
     FILE* f = fopen(filepath, "wb");
     if (!f) {
         printf("Failed to open save file: %s\n", filepath);
         return false;
     }
-
+    
     // Write header
     SaveHeader header = {0};
     header.magic = SAVE_MAGIC;
     header.version = SAVE_VERSION;
     header.timestamp = time(NULL);
     strncpy(header.park_name, g_park_name, sizeof(header.park_name) - 1);
-
+    
     int rating, money, guests, total_entered, entrance_fee;
     float game_time, tod;
     get_park_state(&rating, &money, &guests, &game_time, &tod, &total_entered, &entrance_fee);
-
+    
     header.park_rating = rating;
     header.total_money = money;
     header.num_guests = guests;
     header.game_time = game_time;
     header.time_of_day = tod;
-
+    
     fwrite(&header, sizeof(SaveHeader), 1, f);
-
+    
     // Write park state details
     fwrite(&total_entered, sizeof(int), 1, f);
     fwrite(&entrance_fee, sizeof(int), 1, f);
-
+    
     // Write map data
     save_map_data(f);
-
+    
     // Write rides
     int num_rides = get_num_rides();
     fwrite(&num_rides, sizeof(int), 1, f);
     save_ride_data(f);
-
+    
     // Write staff
     int num_staff = get_num_staff();
     fwrite(&num_staff, sizeof(int), 1, f);
     save_staff_data(f);
-
+    
     // Write scenery
     int num_scenery = get_num_scenery();
     fwrite(&num_scenery, sizeof(int), 1, f);
     save_scenery_data(f);
-
+    
     // Write shops
     int num_shops = get_num_shops();
     fwrite(&num_shops, sizeof(int), 1, f);
     save_shop_data(f);
-
+    
     // Write guests
     fwrite(&guests, sizeof(int), 1, f);
     save_guest_data(f);
-
+    
     // Write litter
     int num_litter = get_num_litter();
     fwrite(&num_litter, sizeof(int), 1, f);
     save_litter_data(f);
-
+    
+    // Write weather
+    save_weather_data(f);
+    
     fclose(f);
-
+    
     printf("Game saved to slot %d: %s\n", slot, filepath);
     return true;
 }
@@ -156,16 +162,16 @@ bool load_game(int slot) {
         printf("Invalid save slot: %d\n", slot);
         return false;
     }
-
+    
     char filepath[256];
     get_save_path(slot, filepath, sizeof(filepath));
-
+    
     FILE* f = fopen(filepath, "rb");
     if (!f) {
         printf("Save file not found: %s\n", filepath);
         return false;
     }
-
+    
     // Read and validate header
     SaveHeader header;
     if (fread(&header, sizeof(SaveHeader), 1, f) != 1) {
@@ -173,64 +179,67 @@ bool load_game(int slot) {
         fclose(f);
         return false;
     }
-
+    
     if (header.magic != SAVE_MAGIC) {
         printf("Invalid save file magic\n");
         fclose(f);
         return false;
     }
-
+    
     if (header.version != SAVE_VERSION) {
         printf("Save file version mismatch\n");
         fclose(f);
         return false;
     }
-
+    
     // Read park state details
     int total_entered, entrance_fee;
     fread(&total_entered, sizeof(int), 1, f);
     fread(&entrance_fee, sizeof(int), 1, f);
-
+    
     // Restore park state
     strncpy(g_park_name, header.park_name, sizeof(g_park_name) - 1);
     set_park_state(header.park_rating, header.total_money, header.num_guests,
                    header.game_time, header.time_of_day, total_entered, entrance_fee);
-
+    
     // Load map data
     load_map_data(f);
-
+    
     // Load rides
     int num_rides;
     fread(&num_rides, sizeof(int), 1, f);
     load_ride_data(f);
-
+    
     // Load staff
     int num_staff;
     fread(&num_staff, sizeof(int), 1, f);
     load_staff_data(f);
-
+    
     // Load scenery
     int num_scenery;
     fread(&num_scenery, sizeof(int), 1, f);
     load_scenery_data(f);
-
+    
     // Load shops
     int num_shops;
     fread(&num_shops, sizeof(int), 1, f);
     load_shop_data(f);
-
+    
     // Load guests
     int num_guests;
     fread(&num_guests, sizeof(int), 1, f);
     load_guest_data(f);
-
+    
     // Load litter
     int num_litter;
     fread(&num_litter, sizeof(int), 1, f);
     load_litter_data(f);
-
+    
+    // Load weather
+    load_weather_data(f);
+    
     fclose(f);
-
+    
     printf("Game loaded from slot %d: %s\n", slot, filepath);
     return true;
 }
@@ -240,15 +249,15 @@ bool save_exists(int slot) {
     if (slot < 0 || slot >= MAX_SAVE_SLOTS) {
         return false;
     }
-
+    
     char filepath[256];
     get_save_path(slot, filepath, sizeof(filepath));
-
+    
     FILE* f = fopen(filepath, "rb");
     if (!f) {
         return false;
     }
-
+    
     fclose(f);
     return true;
 }
@@ -258,33 +267,33 @@ bool get_save_info(int slot, char* name, int* rating, int* money, int* guests, t
     if (slot < 0 || slot >= MAX_SAVE_SLOTS) {
         return false;
     }
-
+    
     char filepath[256];
     get_save_path(slot, filepath, sizeof(filepath));
-
+    
     FILE* f = fopen(filepath, "rb");
     if (!f) {
         return false;
     }
-
+    
     SaveHeader header;
     if (fread(&header, sizeof(SaveHeader), 1, f) != 1) {
         fclose(f);
         return false;
     }
-
+    
     if (header.magic != SAVE_MAGIC) {
         fclose(f);
         return false;
     }
-
+    
     strncpy(name, header.park_name, 63);
     name[63] = '\0';
     *rating = header.park_rating;
     *money = header.total_money;
     *guests = header.num_guests;
     *timestamp = header.timestamp;
-
+    
     fclose(f);
     return true;
 }
@@ -294,15 +303,15 @@ bool delete_save(int slot) {
     if (slot < 0 || slot >= MAX_SAVE_SLOTS) {
         return false;
     }
-
+    
     char filepath[256];
     get_save_path(slot, filepath, sizeof(filepath));
-
+    
     if (remove(filepath) == 0) {
         printf("Deleted save slot %d\n", slot);
         return true;
     }
-
+    
     return false;
 }
 
